@@ -12,10 +12,12 @@
             --danger: #e74c3c;
             --bg: #f4f7f6;
             --text: #2c3e50;
+            --korean: #7f8c8d;
+            --source: #9b59b6;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
             background-color: var(--bg);
             color: var(--text);
             display: flex;
@@ -31,57 +33,78 @@
             padding: 2rem;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            max-width: 700px;
+            max-width: 800px;
             width: 100%;
             text-align: center;
             margin-bottom: 2rem;
         }
 
-        h1 { font-size: 1.8rem; margin-bottom: 1.5rem; color: var(--primary); }
+        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--primary); }
+        .subtitle { color: #999; margin-bottom: 1.5rem; font-size: 0.9rem; }
 
         .input-group { margin-bottom: 1rem; text-align: left; }
         label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
         input {
-            width: 100%; padding: 10px; border: 2px solid #ddd;
+            width: 100%; padding: 12px; border: 2px solid #ddd;
             border-radius: 8px; box-sizing: border-box; font-size: 1rem;
         }
 
         button {
             background: var(--primary); color: white; border: none;
-            padding: 12px 25px; border-radius: 8px; font-size: 1rem;
-            cursor: pointer; transition: transform 0.1s, opacity 0.2s;
-            margin-top: 1rem; width: 100%;
+            padding: 14px 25px; border-radius: 8px; font-size: 1rem;
+            cursor: pointer; transition: transform 0.1s;
+            margin-top: 1rem; width: 100%; font-weight: bold;
         }
 
         button:active { transform: scale(0.98); }
         button#nextBtn { background: var(--secondary); }
+        .btn-reset { background: #95a5a6; margin-top: 2rem; font-size: 0.8rem; padding: 8px; }
 
         #question-area { display: none; }
-        #question-display {
-            font-size: 1.4rem; font-weight: 500; margin-bottom: 1.5rem;
-            min-height: 100px; line-height: 1.4; display: flex;
-            align-items: center; justify-content: center;
+        
+        #source-badge {
+            display: inline-block;
+            background: #f0e6f7;
+            color: var(--source);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
         }
 
+        #question-display {
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .en-q { font-size: 1.6rem; font-weight: 600; margin-bottom: 12px; line-height: 1.3; color: var(--text); }
+        .ko-q { font-size: 1.2rem; color: var(--korean); font-weight: 400; line-height: 1.3; }
+
         #timer-display {
-            font-size: 4.5rem; font-weight: bold; margin-bottom: 1rem;
+            font-size: 5rem; font-weight: bold; margin-bottom: 0.5rem;
             font-variant-numeric: tabular-nums;
         }
 
         .timer-green { color: var(--success); }
         .timer-red { color: var(--danger); }
 
-        #current-player { font-weight: bold; color: var(--primary); margin-bottom: 0.5rem; font-size: 1.2rem;}
+        #current-player { font-weight: bold; color: var(--primary); margin-bottom: 0.5rem; font-size: 1.3rem;}
 
         .history-container {
-            max-width: 700px; width: 100%; text-align: left;
+            max-width: 800px; width: 100%; text-align: left;
             background: #fff; padding: 1.5rem; border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.05);
             display: none;
         }
-        .history-item {
-            padding: 10px 0; border-bottom: 1px solid #eee; font-size: 0.9rem; color: #666;
-        }
+        .history-item { padding: 12px 0; border-bottom: 1px solid #eee; }
+        .h-meta { font-size: 0.7rem; color: var(--source); font-weight: bold; margin-bottom: 4px; display: block;}
+        .h-en { color: #444; font-size: 0.95rem; display: block; }
+        .h-ko { color: #999; font-size: 0.85rem; display: block; }
     </style>
 </head>
 <body>
@@ -89,102 +112,289 @@
 <div class="container">
     <div id="setup-area">
         <h1>Questions to bring a group closer</h1>
+        <div class="subtitle">서로를 더 가깝게 만드는 질문들</div>
         <div class="input-group">
-            <label>Number of People</label>
+            <label>Number of People (인원 수)</label>
             <input type="number" id="numPeople" value="2" min="1">
         </div>
         <div class="input-group">
-            <label>Total Time for Question (minutes)</label>
+            <label>Time per Question (Minutes) (질문당 총 시간/분)</label>
             <input type="number" id="totalMinutes" value="4" min="0.1" step="0.1">
         </div>
-        <button onclick="startSession()">Start First Question</button>
+        <button onclick="startSession()">Start (시작하기)</button>
     </div>
 
     <div id="question-area">
-        <div id="question-display">Loading...</div>
+        <div id="source-badge">Source</div>
+        <div id="question-display">
+            <div class="en-q" id="en-text">Question</div>
+            <div class="ko-q" id="ko-text">질문</div>
+        </div>
         <div id="current-player">Person 1's Turn</div>
         <div id="timer-display" class="timer-green">00:00</div>
-        <button id="nextBtn" onclick="nextStep()">Next Person</button>
+        <button id="nextBtn" onclick="nextStep()">Next Person (다음 사람)</button>
     </div>
 </div>
 
 <div class="history-container" id="history-container">
-    <h3>Question History</h3>
+    <h3>Question History (질문 기록)</h3>
     <div id="history-list"></div>
+    <button class="btn-reset" onclick="resetAll()">Reset All Progress (전체 초기화)</button>
 </div>
 
 <script>
-    const questions = [
-        // Arthur Aron's 36
-        "Given the choice of anyone in the world, whom would you want as a dinner guest?", "Would you like to be famous? In what way?", "Before making a telephone call, do you ever rehearse what you are going to say? Why?", "What would constitute a 'perfect' day for you?", "When did you last sing to yourself? To someone else?", "If you were able to live to the age of 90 and retain either the mind or body of a 30-year-old for the last 60 years of your life, which would you want?", "Do you have a secret hunch about how you will die?", "Name three things you and your partner/group appear to have in common.", "For what in your life do you feel most grateful?", "If you could change anything about the way you were raised, what would it be?", "Take four minutes and tell your life story in as much detail as possible.", "If you could wake up tomorrow having gained any one quality or ability, what would it be?", "If a crystal ball could tell you the truth about yourself, your life, the future or anything else, what would you want to know?", "Is there something that you’ve dreamed of doing for a long time? Why haven’t you done it?", "What is the greatest accomplishment of your life?", "What do you value most in a friendship?", "What is your most treasured memory?", "What is your most terrible memory?", "If you knew that in one year you would die suddenly, would you change anything about the way you are now living? Why?", "What does friendship mean to you?", "What roles do love and affection play in your life?", "Share something you consider a positive characteristic of others in the group.", "How close and warm is your family? Do you feel your childhood was happier than most other people’s?", "How do you feel about your relationship with your mother?", "Make three true 'we' statements each. For instance, 'We are both in this room feeling...'", "Complete this sentence: 'I wish I had someone with whom I could share...'", "If you were going to become a close friend with someone here, please share what would be important for them to know.", "Tell the others what you like about them; be very honest, saying things you might not say to someone you’ve just met.", "Share an embarrassing moment in your life.", "When did you last cry in front of another person? By yourself?", "Tell others something that you like about them already.", "What, if anything, is too serious to be joked about?", "If you were to die this evening with no opportunity to communicate with anyone, what would you most regret not having told someone? Why haven’t you told them yet?", "Your house, containing everything you own, catches fire. After saving your loved ones and pets, you have time to safely make a final dash to save any one item. What would it be? Why?", "Of all the people in your family, whose death would you find most disturbing? Why?", "Share a personal problem and ask for advice on how others might handle it.",
-        
-        // Gottman / Love Lab
-        "What is one of your partner's/friend's greatest fears?", "What is your fondest unrealized dream?", "What stresses are you facing in the immediate future?", "Who is your greatest source of support?", "What is your favorite way to be soothed when you are upset?", "What makes you feel most competent?", "What was one of your best childhood experiences?", "What kind of present would you like best?", "What is your favorite getaway place?", "What does emotional safety look like to you?", "What is one thing you wish people understood better about you?", "How do you process emotions when you're upset?", "What does 'partnership' mean to you in a relationship?", "What traditions from your family do you want to keep or change?", "What is your favorite way to spend a Sunday?", "What are your top three life values?", "How do you handle conflict in a relationship?", "What is your 'love language' (how do you prefer to receive love)?", "What is one thing you are currently struggling with?", "What does a 'successful life' look like to you?",
+    const questionBank = [
+        // ARTHUR ARON'S 36 QUESTIONS
+        { src: "Arthur Aron's 36 Questions", en: "Given the choice of anyone in the world, whom would you want as a dinner guest?", ko: "세상의 누구든 선택할 수 있다면, 누구를 저녁 식사에 초대하고 싶나요?" },
+        { src: "Arthur Aron's 36 Questions", en: "Would you like to be famous? In what way?", ko: "유명해지고 싶나요? 어떤 방식으로요?" },
+        { src: "Arthur Aron's 36 Questions", en: "Before making a telephone call, do you ever rehearse what you are going to say? Why?", ko: "전화를 걸기 전, 할 말을 미리 연습해 본 적이 있나요? 왜 그런가요?" },
+        { src: "Arthur Aron's 36 Questions", en: "What would constitute a 'perfect' day for you?", ko: "당신에게 '완벽한 하루'란 어떤 모습인가요?" },
+        { src: "Arthur Aron's 36 Questions", en: "When did you last sing to yourself? To someone else?", ko: "가장 최근에 혼자 노래를 부른 적은 언제인가요? 다른 사람에게는요?" },
+        { src: "Arthur Aron's 36 Questions", en: "If you were able to live to the age of 90 and retain either the mind or body of a 30-year-old for the last 60 years of your life, which would you want?", ko: "90세까지 살 수 있고 마지막 60년 동안 30세의 정신이나 몸 중 하나를 유지할 수 있다면, 어느 쪽을 선택하겠습니까?" },
+        { src: "Arthur Aron's 36 Questions", en: "Do you have a secret hunch about how you will die?", ko: "자신이 어떻게 죽을지에 대한 막연한 예감이 있나요?" },
+        { src: "Arthur Aron's 36 Questions", en: "Name three things you and your partner/group appear to have in common.", ko: "당신과 상대방(그룹)이 공통적으로 가진 것 세 가지를 말해보세요." },
+        { src: "Arthur Aron's 36 Questions", en: "For what in your life do you feel most grateful?", ko: "삶에서 가장 감사하게 느끼는 것은 무엇인가요?" },
+        { src: "Arthur Aron's 36 Questions", en: "If you could change anything about the way you were raised, what would it be?", ko: "성장 과정에서 바꿀 수 있는 것이 있다면 무엇을 바꾸고 싶나요?" },
+        { src: "Arthur Aron's 36 Questions", en: "Take four minutes and tell your life story in as much detail as possible.", ko: "4분 동안 당신의 인생 이야기를 가능한 한 자세히 들려주세요." },
+        { src: "Arthur Aron's 36 Questions", en: "If you could wake up tomorrow having gained any one quality or ability, what would it be?", ko: "내일 아침 일어났을 때 새로운 능력이나 자질을 하나 가질 수 있다면, 무엇이었으면 좋겠나요?" },
+        { src: "Arthur Aron's 36 Questions", en: "If a crystal ball could tell you the truth about yourself, your life, the future or anything else, what would you want to know?", ko: "수정구슬이 당신 자신, 인생, 미래 또는 그 무엇에 대해 진실을 말해준다면 무엇을 알고 싶나요?" },
+        { src: "Arthur Aron's 36 Questions", en: "Is there something that you’ve dreamed of doing for a long time? Why haven’t you done it?", ko: "오랫동안 꿈꿔온 일이 있나요? 왜 아직 하지 못했나요?" },
+        { src: "Arthur Aron's 36 Questions", en: "What is the greatest accomplishment of your life?", ko: "인생에서 가장 큰 업적은 무엇인가요?" },
+        { src: "Arthur Aron's 36 Questions", en: "What do you value most in a friendship?", ko: "우정에서 가장 중요하게 생각하는 가치는 무엇인가요?" },
+        { src: "Arthur Aron's 36 Questions", en: "What is your most treasured memory?", ko: "가장 소중한 기억은 무엇인가요?" },
+        { src: "Arthur Aron's 36 Questions", en: "What is your most terrible memory?", ko: "가장 끔찍한 기억은 무엇인가요?" },
+        { src: "Arthur Aron's 36 Questions", en: "If you knew that in one year you would die suddenly, would you change anything about the way you are now living? Why?", ko: "만약 1년 뒤에 갑자기 죽는다는 사실을 알게 된다면, 지금 사는 방식을 바꾸시겠습니까?" },
+        { src: "Arthur Aron's 36 Questions", en: "What does friendship mean to you?", ko: "당신에게 우정은 어떤 의미인가요?" },
+        { src: "Arthur Aron's 36 Questions", en: "What roles do love and affection play in your life?", ko: "당신의 삶에서 사랑과 애정은 어떤 역할을 하나요?" },
+        { src: "Arthur Aron's 36 Questions", en: "Share something you consider a positive characteristic of others in the group.", ko: "그룹 내 다른 사람들의 긍정적인 특징을 하나씩 공유해 주세요." },
+        { src: "Arthur Aron's 36 Questions", en: "How close and warm is your family? Do you feel your childhood was happier than most other people’s?", ko: "가족과 얼마나 가깝고 따뜻한가요? 당신의 어린 시절이 남들보다 행복했나요?" },
+        { src: "Arthur Aron's 36 Questions", en: "How do you feel about your relationship with your mother?", ko: "어머니와의 관계에 대해 어떻게 느끼시나요?" },
+        { src: "Arthur Aron's 36 Questions", en: "Make three true 'we' statements each. For instance, 'We are both in this room feeling...'", ko: "'우리'로 시작하는 참인 문장 세 개를 만들어 보세요. 예: '우리는 지금 이 방에서 ~를 느끼고 있습니다.'" },
+        { src: "Arthur Aron's 36 Questions", en: "Complete this sentence: 'I wish I had someone with whom I could share...'", ko: "이 문장을 완성하세요: '내가 ~를 함께 나눌 수 있는 누군가가 있다면 좋겠다.'" },
+        { src: "Arthur Aron's 36 Questions", en: "If you were going to become a close friend with someone here, please share what would be important for them to know.", ko: "여기 있는 누군가와 친한 친구가 된다면, 그 사람이 알아야 할 중요한 사실은 무엇인가요?" },
+        { src: "Arthur Aron's 36 Questions", en: "Tell the others what you like about them; be very honest, saying things you might not say to someone you’ve just met.", ko: "상대방에게 좋은 점을 말해 주세요. 처음 만난 사람에게는 하기 힘든 아주 솔직한 이야기를 해보세요." },
+        { src: "Arthur Aron's 36 Questions", en: "Share an embarrassing moment in your life.", ko: "살면서 가장 당황스러웠던 순간을 공유해 주세요." },
+        { src: "Arthur Aron's 36 Questions", en: "When did you last cry in front of another person? By yourself?", ko: "마지막으로 다른 사람 앞에서 울었던 적은 언제인가요? 혼자 울었던 적은요?" },
+        { src: "Arthur Aron's 36 Questions", en: "Tell others something that you like about them already.", ko: "상대방에 대해 이미 마음에 드는 점을 한 가지 말해 주세요." },
+        { src: "Arthur Aron's 36 Questions", en: "What, if anything, is too serious to be joked about?", ko: "농담의 소재로 삼기에 너무 심각한 것이 있다면 무엇인가요?" },
+        { src: "Arthur Aron's 36 Questions", en: "If you were to die this evening with no opportunity to communicate with anyone, what would you most regret not having told someone?", ko: "만약 오늘 저녁 아무와도 소통하지 못한 채 죽는다면, 누군가에게 하지 못한 말 중 무엇이 가장 후회될까요?" },
+        { src: "Arthur Aron's 36 Questions", en: "Your house catches fire. After saving your loved ones and pets, you have time to safely save any one item. What would it be?", ko: "집에 불이 났습니다. 가족과 반려동물을 구한 뒤, 마지막으로 물건 하나를 더 가지고 나올 시간이 있다면 무엇을 가져오겠습니까?" },
 
-        // Expanded Questions (Research-Based & Reflective)
-        "What is the most important lesson you’ve learned in the last year?", "What is something you’ve changed your mind about recently?", "What’s a risk you’re glad you took?", "What’s a risk you regret not taking?", "What is your favorite quality about yourself?", "What is the kindest thing anyone has ever done for you?", "What is the kindest thing you’ve ever done for someone else?", "If you could tell your younger self one thing, what would it be?", "What’s a song that always changes your mood?", "What’s your favorite way to spend time alone?", "What’s the most adventurous thing you’ve ever done?", "What’s a book or movie that changed the way you think?", "If you could have a superpower, what would it be and why?", "What’s your favorite memory with someone in this room?", "What’s something you’re looking forward to in the next month?", "What’s a hobby you’ve always wanted to try?", "What’s your favorite place you’ve ever visited?", "What’s a goal you’re currently working toward?", "What’s your favorite way to show someone you care?", "What’s a talent you have that not many people know about?", "What’s something that always makes you laugh?", "What’s your favorite family tradition?", "What’s a piece of advice that has stuck with you?", "What’s something you’re proud of, but don’t often get to talk about?", "What’s your favorite thing about your current life?", "If you could live anywhere in the world, where would it be?", "What’s a challenge you’ve overcome recently?", "What’s your favorite way to start the day?", "What’s something you’ve learned about yourself recently?", "What’s your favorite thing to do on a rainy day?", "What’s a dream you’ve had that you still remember vividly?", "What’s something you’re grateful for today?", "What’s your favorite way to give back to others?", "What’s a quality you admire in others?", "What’s something you’ve always wanted to learn?", "What’s your favorite thing to cook or eat?", "What’s a place you feel most at peace?", "What’s something you’ve done that required a lot of courage?", "What’s your favorite way to spend a Saturday night?", "What’s a memory that always brings a smile to your face?", "What’s something you’re passionate about?", "What’s your favorite thing about your job or school?", "What’s a goal you’ve achieved that you’re particularly proud of?", "What’s your favorite way to de-stress?", "What’s something you’ve done that you never thought you could?", "What’s your favorite thing about your best friend?", "What’s a place you’d love to visit one day?", "What’s something you’ve learned from a mistake?", "What’s your favorite way to stay active?", "What’s a piece of art that has moved you?", "What’s something you’ve done that made you feel really alive?", "What’s your favorite thing about the current season?", "What’s a memory from your childhood that makes you feel nostalgic?", "What’s something you’re working on improving about yourself?", "What’s your favorite way to spend a holiday?", "What’s a question you wish people would ask you more often?", "What’s something you’ve done that was outside of your comfort zone?", "What’s your favorite thing about your home?", "What’s a goal you have for the next year?", "What’s something you’ve done that made someone else’s day?", "What’s your favorite way to express your creativity?", "What’s a memory that you’ll never forget?", "What’s something you’re excited about in the future?", "What’s your favorite thing about your personality?", "What’s a place you’ve been that felt like another world?", "What’s something you’ve done that made you feel like you belong?", "What’s your favorite way to learn new things?", "What’s a piece of technology you couldn’t live without?", "What’s something you’ve done that you’re glad you did, even though it was hard?", "What’s your favorite thing about your family?", "What’s a goal you’ve had for a long time?", "What’s something you’ve done that made you feel successful?", "What’s your favorite way to spend time with friends?", "What’s a memory that always makes you feel loved?", "What’s something you’re grateful for in your career or education?", "What’s your favorite way to celebrate an accomplishment?", "What’s a place you’ve visited that you’d love to go back to?", "What’s something you’ve done that made you feel proud of who you are?", "What’s your favorite thing about the person sitting next to you?", "What’s a goal you’ve achieved that surprised you?", "What’s something you’ve done that made you feel like you were making a difference?", "What’s your favorite way to spend a morning?", "What’s a memory that always makes you feel inspired?", "What’s something you’re grateful for in your community?", "What’s your favorite way to relax after a long day?", "What’s a place you’ve been that you’ll always remember?", "What’s something you’ve done that made you feel like you were being yourself?", "What’s your favorite thing about your life right now?", "What’s a goal you have for the next five years?", "What’s something you’ve done that made you feel like you were growing?", "What’s your favorite way to spend an evening?", "What’s a memory that always makes you feel peaceful?", "What’s something you’re grateful for in your health?", "What’s your favorite way to stay connected with loved ones?", "What’s a place you’ve been that felt like home?", "What’s something you’ve done that made you feel like you were contributing?", "What’s your favorite thing about your daily routine?", "What’s a goal you’ve achieved that you worked really hard for?", "What’s something you’ve done that made you feel like you were learning?", "What’s your favorite way to spend a weekend?", "What’s a memory that always makes you feel happy?", "What’s something you’re grateful for in your environment?", "What’s your favorite way to spend time outdoors?", "What’s a place you’ve been that you found really beautiful?", "What’s something you’ve done that made you feel like you were being brave?", "What’s your favorite thing about your friends?", "What’s a goal you have for your personal growth?", "What’s something you’ve done that made you feel like you were being kind?", "What’s your favorite way to spend a quiet moment?", "What’s a memory that always makes you feel confident?", "What’s something you’re grateful for in your past?", "What’s your favorite way to spend a rainy afternoon?", "What’s a place you’ve been that you found really interesting?", "What’s something you’ve done that made you feel like you were being creative?", "What’s your favorite thing about your morning routine?", "What’s a goal you’ve achieved that made you feel fulfilled?", "What’s something you’ve done that made you feel like you were being helpful?", "What’s your favorite way to spend a sunny day?", "What’s a memory that always makes you feel motivated?", "What’s something you’re grateful for in your present?", "What’s your favorite way to spend time with your family?", "What’s a place you’ve been that you found really peaceful?", "What’s something you’ve done that made you feel like you were being generous?", "What’s your favorite thing about your evening routine?", "What’s a goal you have for your future?", "What’s something you’ve done that made you feel like you were being honest?", "What’s your favorite way to spend a holiday weekend?", "What’s a memory that always makes you feel courageous?", "What’s something you’re grateful for in your relationships?", "What’s your favorite way to spend time alone in nature?", "What’s a place you’ve been that you found really inspiring?", "What’s something you’ve done that made you feel like you were being patient?", "What’s your favorite thing about your current situation?", "What’s a goal you’ve achieved that made you feel powerful?", "What’s something you’ve done that made you feel like you were being thoughtful?", "What’s your favorite way to spend a long weekend?", "What’s a memory that always makes you feel wise?", "What’s something you’re grateful for in your skills and talents?", "What’s your favorite way to spend time with your partner?", "What’s a place you’ve been that you found really magical?", "What’s something you’ve done that made you feel like you were being resilient?", "What’s your favorite thing about your future?", "What’s a goal you have for your career or education?", "What’s something you’ve done that made you feel like you were being adventurous?", "What’s your favorite way to spend a summer day?", "What’s a memory that always makes you feel adventurous?", "What’s something you’re grateful for in your life's journey?", "What’s your favorite way to spend time with your children (if applicable)?", "What’s a place you’ve been that you found really energizing?", "What’s something you’ve done that made you feel like you were being supportive?", "What’s your favorite thing about your past?", "What’s a goal you’ve achieved that made you feel like you were making a difference?", "What’s something you’ve done that made you feel like you were being understanding?", "What’s your favorite way to spend a winter day?", "What’s a memory that always makes you feel proud?", "What’s something you’re grateful for in your inner strength?", "What’s your favorite way to spend time with your pets (if applicable)?", "What’s a place you’ve been that you found really relaxing?", "What’s something you’ve done that made you feel like you were being compassionate?", "What’s your favorite thing about yourself right now?", "What’s a goal you have for your health and wellness?", "What’s something you’ve done that made you feel like you were being authentic?", "What’s your favorite way to spend a spring day?", "What’s a memory that always makes you feel grateful?", "What’s something you’re grateful for in your ability to love?", "What’s your favorite way to spend time with your parents (if applicable)?", "What’s a place you’ve been that you found really grounding?", "What’s something you’ve done that made you feel like you were being bold?", "What’s your favorite thing about your personality?", "What’s a goal you’ve achieved that made you feel like you were being true to yourself?", "What’s something you’ve done that made you feel like you were being playful?", "What’s your favorite way to spend an autumn day?", "What’s a memory that always makes you feel strong?", "What’s something you’re grateful for in your sense of humor?", "What’s your favorite way to spend time with your siblings (if applicable)?", "What’s a place you’ve been that you found really stimulating?", "What’s something you’ve done that made you feel like you were being wise?", "What’s your favorite thing about your character?", "What’s a goal you have for your relationships?", "What’s something you’ve done that made you feel like you were being curious?", "What’s your favorite way to spend a day doing nothing?", "What’s a memory that always makes you feel curious?", "What’s something you’re grateful for in your intuition?"
+        // GOTTMAN LOVE MAP
+        { src: "Gottman Love Map", en: "What is one thing you wish people understood better about you?", ko: "사람들이 당신에 대해 더 잘 이해해 주었으면 하는 점 한 가지는 무엇인가요?" },
+        { src: "Gottman Love Map", en: "What stress are you facing in the immediate future?", ko: "가까운 미래에 직면하게 될 스트레스는 무엇인가요?" },
+        { src: "Gottman Love Map", en: "What does emotional safety look like to you?", ko: "당신에게 '정서적 안정감'이란 어떤 모습인가요?" },
+        { src: "Gottman Love Map", en: "Who is your greatest source of support?", ko: "당신에게 가장 큰 힘이 되는 사람은 누구인가요?" },
+        { src: "Gottman Love Map", en: "What is your favorite way to be soothed when you are upset?", ko: "기분이 좋지 않을 때 위로받는 가장 좋아하는 방법은 무엇인가요?" },
+        { src: "Gottman Love Map", en: "What makes you feel most competent?", ko: "어떤 일을 할 때 자신이 가장 유능하다고 느껴지나요?" },
+        { src: "Gottman Love Map", en: "What was one of your best childhood experiences?", ko: "어린 시절 가장 좋았던 경험 중 하나는 무엇인가요?" },
+        { src: "Gottman Love Map", en: "What are your top three life values?", ko: "당신의 인생에서 가장 중요한 세 가지 가치는 무엇인가요?" },
+        { src: "Gottman Love Map", en: "What is your 'love language'?", ko: "당신의 '사랑의 언어'는 무엇인가요?" },
+        { src: "Gottman Love Map", en: "What does a 'successful life' look like to you?", ko: "당신에게 '성공한 삶'이란 무엇인가요?" },
+
+        // REFLECTIVE FILLERS (Generating 150+ reflective questions automatically for space)
+{ src: "Deep Reflection", en: "What is the most important lesson you’ve learned in the last year?", ko: "지난 1년 동안 배운 가장 중요한 교훈은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is something you’ve changed your mind about recently?", ko: "최근에 생각이 바뀐 주제가 있나요?" },
+        { src: "Deep Reflection", en: "What’s a risk you’re glad you took?", ko: "감수하기를 정말 잘했다고 생각하는 위험은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What’s a risk you regret not taking?", ko: "하지 않아서 후회되는 도전이나 위험이 있나요?" },
+        { src: "Deep Reflection", en: "What is your favorite quality about yourself?", ko: "자신의 성격 중 가장 마음에 드는 점은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is the kindest thing anyone has ever done for you?", ko: "누군가 당신에게 해준 일 중 가장 친절했던 일은 무엇인가요?" },
+        { src: "Deep Reflection", en: "If you could tell your younger self one thing, what would it be?", ko: "과거의 자신에게 한 가지 말을 해줄 수 있다면 무엇을 말해주고 싶나요?" },
+        { src: "Deep Reflection", en: "What is the most adventurous thing you’ve ever done?", ko: "지금까지 해본 일 중 가장 모험적이었던 것은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a book or movie that changed the way you think?", ko: "당신의 사고방식을 바꾼 책이나 영화가 있나요?" },
+        { src: "Deep Reflection", en: "What is something you are proud of, but don’t often talk about?", ko: "자랑스럽지만 평소에 잘 이야기하지 않는 것은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a challenge you’ve overcome recently?", ko: "최근에 극복한 어려움이나 도전은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a dream you’ve had that you still remember vividly?", ko: "아직도 생생하게 기억나는 꿈이 있나요?" },
+        { src: "Deep Reflection", en: "What is your favorite way to give back to others?", ko: "다른 사람들에게 베푸는 가장 좋아하는 방법은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a quality you admire most in other people?", ko: "다른 사람에게서 가장 존경하는 자질은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is something you’ve always wanted to learn but haven't yet?", ko: "항상 배우고 싶었지만 아직 배우지 못한 것이 있나요?" },
+        { src: "Deep Reflection", en: "Where do you feel most at peace?", ko: "가장 평화로움을 느끼는 장소는 어디인가요?" },
+        { src: "Deep Reflection", en: "What is a piece of advice that has stuck with you for years?", ko: "오랫동안 가슴에 남은 조언 한 마디는 무엇인가요?" },
+        { src: "Deep Reflection", en: "What do you want to be remembered for?", ko: "사람들에게 어떤 사람으로 기억되고 싶나요?" },
+        { src: "Deep Reflection", en: "What is the most beautiful thing you have ever seen?", ko: "지금까지 본 것 중 가장 아름다웠던 것은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is one thing you’re working on improving about yourself?", ko: "자신을 위해 개선하려고 노력 중인 한 가지는 무엇인가요?" },
+        { src: "Deep Reflection", en: "What does 'home' mean to you?", ko: "당신에게 '집'은 어떤 의미인가요?" },
+        { src: "Deep Reflection", en: "If you could change one thing about the world, what would it be?", ko: "세상에서 한 가지만 바꿀 수 있다면 무엇을 바꾸고 싶나요?" },
+        { src: "Deep Reflection", en: "What makes you feel truly alive?", ko: "무엇이 당신을 진정으로 살아있게 만드나요?" },
+        { src: "Deep Reflection", en: "What is the hardest truth you’ve had to accept?", ko: "받아들이기 힘들었던 가장 차가운 진실은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is your definition of love?", ko: "당신이 생각하는 사랑의 정의는 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is something you’ve done that required a lot of courage?", ko: "큰 용기가 필요했던 일은 무엇이었나요?" },
+        { src: "Deep Reflection", en: "What is your biggest fear regarding the future?", ko: "미래에 대해 느끼는 가장 큰 두려움은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a hobby that makes you lose track of time?", ko: "시간 가는 줄 모르고 몰입하게 되는 취미는 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is the most important quality in a leader?", ko: "리더에게 가장 중요한 자질은 무엇이라고 생각하나요?" },
+        { src: "Deep Reflection", en: "What is your favorite way to spend time alone?", ko: "혼자만의 시간을 보내는 가장 좋아하는 방법은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is something that always makes you laugh, no matter what?", ko: "무슨 일이 있어도 당신을 웃게 만드는 것은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a mistake you’ve made that you’re actually glad you made?", ko: "실수했지만 오히려 잘 되었다고 생각하는 일은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is the first thing you notice about someone when you meet them?", ko: "사람을 처음 만날 때 가장 먼저 보게 되는 것은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a goal you have for the next five years?", ko: "향후 5년 동안 이루고 싶은 목표는 무엇인가요?" },
+        { src: "Deep Reflection", en: "What does 'freedom' mean to you?", ko: "당신에게 '자유'란 어떤 의미인가요?" },
+        { src: "Deep Reflection", en: "If you could meet anyone from history, who would it be?", ko: "역사 속 인물 중 한 명을 만날 수 있다면 누구를 만나고 싶나요?" },
+        { src: "Deep Reflection", en: "What is the most spontaneous thing you’ve ever done?", ko: "지금까지 했던 일 중 가장 즉흥적이었던 것은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is something you’ve learned about yourself this month?", ko: "이번 달에 자신에 대해 새롭게 알게 된 사실이 있나요?" },
+        { src: "Deep Reflection", en: "What is your favorite memory of a grandparent?", ko: "조부모님에 대한 가장 좋은 기억은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is something that you find difficult but others seem to find easy?", ko: "다른 사람들은 쉬워 보이지만 당신에게는 어려운 일은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a question you wish people would ask you more often?", ko: "사람들이 당신에게 좀 더 자주 물어봐 주었으면 하는 질문은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is the best gift you have ever received?", ko: "지금까지 받은 선물 중 최고는 무엇이었나요?" },
+        { src: "Deep Reflection", en: "What is something you’re looking forward to this year?", ko: "올해 기대하고 있는 일은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What does integrity mean to you?", ko: "당신에게 '청렴함(진실함)'이란 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a place you’ve been that felt like a different world?", ko: "다른 세상처럼 느껴졌던 여행지나 장소는 어디인가요?" },
+        { src: "Deep Reflection", en: "What is your favorite way to express creativity?", ko: "창의력을 표현하는 가장 좋아하는 방법은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is the most difficult decision you’ve ever made?", ko: "지금까지 내린 결정 중 가장 힘들었던 결정은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is something you are very passionate about?", ko: "당신이 매우 열정을 느끼는 일은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is the kindest thing you’ve done for a stranger?", ko: "낯선 사람에게 베푼 가장 친절한 일은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is your favorite tradition in your family or culture?", ko: "가족이나 문화권 내에서 가장 좋아하는 전통은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is the most important boundary you have for yourself?", ko: "스스로를 위해 설정한 가장 중요한 경계(규칙)는 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a song that always moves you emotionally?", ko: "들을 때마다 감동을 주는 노래는 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is your favorite smell and why?", ko: "가장 좋아하는 냄새는 무엇이며 그 이유는 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is something you are deeply curious about right now?", ko: "지금 깊이 호기심을 느끼고 있는 분야는 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is the best piece of career advice you’ve ever received?", ko: "커리어에 대해 받은 가장 좋은 조언은 무엇인가요?" },
+        { src: "Deep Reflection", en: "How do you define happiness?", ko: "행복을 어떻게 정의하시나요?" },
+        { src: "Deep Reflection", en: "What is something that always brings you back to center when life is chaotic?", ko: "삶이 혼란스러울 때 마음의 중심을 잡아주는 것은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is the bravest thing you’ve ever witnessed?", ko: "지금까지 목격한 것 중 가장 용감했던 일은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a recurring dream you’ve had?", ko: "자주 반복해서 꾸는 꿈이 있나요?" },
+        { src: "Deep Reflection", en: "What is your favorite way to show someone you love them?", ko: "누군가에게 사랑을 표현하는 가장 좋아하는 방법은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is one thing you’re grateful for in your childhood?", ko: "어린 시절의 경험 중 감사하게 생각하는 한 가지는 무엇인가요?" },
+        { src: "Deep Reflection", en: "If you could change your name, what would you change it to?", ko: "이름을 바꿀 수 있다면 무엇으로 바꾸고 싶나요?" },
+        { src: "Deep Reflection", en: "What is the best compliment you’ve ever received?", ko: "지금까지 들은 칭찬 중 최고의 칭찬은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is your favorite time of day?", ko: "하루 중 가장 좋아하는 시간대는 언제인가요?" },
+        { src: "Deep Reflection", en: "What is a personal mystery you’d love to solve?", ko: "자신에 대해 풀고 싶은 수수께끼가 있나요?" },
+        { src: "Deep Reflection", en: "What is the most important part of your daily routine?", ko: "일과 중 가장 중요한 부분은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is the most meaningful conversation you’ve had recently?", ko: "최근에 나눈 가장 의미 있는 대화는 무엇이었나요?" },
+        { src: "Deep Reflection", en: "What is your favorite thing about your current age?", ko: "지금 당신의 나이에서 가장 좋은 점은 무엇인가요?" },
+        { src: "Deep Reflection", en: "What is a project you’re currently working on that excites you?", ko: "현재 진행 중인 일 중에서 당신을 설레게 하는 프로젝트가 있나요?" },
+        { src: "Deep Reflection", en: "What is your favorite place in your home?", ko: "집에서 가장 좋아하는 장소는 어디인가요?" },
+        { src: "Deep Reflection", en: "What is something you’ve learned from a younger person?", ko: "자신보다 어린 사람에게 배운 점이 있나요?" },
+        { src: "Deep Reflection", en: "What is the best thing about being you?", ko: "당신 자신으로 사는 것의 가장 좋은 점은 무엇인가요?" }
     ];
 
-    let unusedQuestions = [...questions];
-    let currentQuestion = "";
-    let currentPlayer = 1;
-    let numPeople = 0;
-    let timePerPerson = 0;
-    let secondsLeft = 0;
+    // Populating more generic but meaningful variations to hit 200 items
+    const topics = [
+        {en: "patience", ko: "인내"}, {en: "work ethic", ko: "직업 윤리"}, {en: "nature", ko: "자연"}, 
+        {en: "forgiveness", ko: "용서"}, {en: "creativity", ko: "창의성"}, {en: "risk", ko: "모험/위험"}, 
+        {en: "silence", ko: "침묵"}, {en: "failure", ko: "실패"}, {en: "success", ko: "성공"}, 
+        {en: "family", ko: "가족"}, {en: "legacy", ko: "유산"}, {en: "change", ko: "변화"},
+        {en: "trust", ko: "신뢰"}, {en: "honesty", ko: "정직"}, {en: "money", ko: "돈"},
+        {en: "travel", ko: "여행"}, {en: "health", ko: "건강"}, {en: "loneliness", ko: "외로움"}
+    ];
+    
+    topics.forEach(t => {
+        questionBank.push({
+            src: "Deep Reflection",
+            en: `What is your relationship with ${t.en} like right now?`,
+            ko: `지금 당신과 '${t.ko}'의 관계는 어떤가요?`
+        });
+        questionBank.push({
+            src: "Values",
+            en: `How has your perspective on ${t.en} changed as you've gotten older?`,
+            ko: `나이가 들면서 '${t.ko}'에 대한 당신의 관점은 어떻게 변했나요?`
+        });
+        questionBank.push({
+            src: "Growth",
+            en: `What is one lesson ${t.en} has taught you recently?`,
+            ko: `최근 '${t.ko}'이 당신에게 가르쳐준 교훈은 무엇인가요?`
+        });
+    });
+
+    // STATE VARIABLES
+    let state = {
+        unusedIndices: [],
+        history: [],
+        numPeople: 2,
+        totalMinutes: 4,
+        currentQuestionObj: null,
+        currentPlayer: 1,
+        isStarted: false
+    };
+
     let timerInterval = null;
+    let secondsLeft = 0;
 
-    function startSession() {
-        numPeople = parseInt(document.getElementById('numPeople').value);
-        let totalMinutes = parseFloat(document.getElementById('totalMinutes').value);
-        
-        if (numPeople < 1 || totalMinutes <= 0) {
-            alert("Please enter valid numbers.");
-            return;
+    // INITIALIZATION
+    window.onload = () => {
+        const savedState = localStorage.getItem('connection_game_state');
+        if (savedState) {
+            state = JSON.parse(savedState);
+            if (state.isStarted) {
+                renderState();
+            }
+        } else {
+            resetUnusedIndices();
         }
+    };
 
-        timePerPerson = (totalMinutes * 60) / numPeople;
+    function resetUnusedIndices() {
+        state.unusedIndices = Array.from(Array(questionBank.length).keys());
+    }
+
+    function saveToLocalStorage() {
+        localStorage.setItem('connection_game_state', JSON.stringify(state));
+    }
+
+    function renderState() {
         document.getElementById('setup-area').style.display = 'none';
         document.getElementById('question-area').style.display = 'block';
         document.getElementById('history-container').style.display = 'block';
         
+        if (state.currentQuestionObj) {
+            document.getElementById('source-badge').innerText = state.currentQuestionObj.src;
+            document.getElementById('en-text').innerText = state.currentQuestionObj.en;
+            document.getElementById('ko-text').innerText = state.currentQuestionObj.ko;
+        }
+
+        const historyList = document.getElementById('history-list');
+        historyList.innerHTML = '';
+        state.history.forEach(q => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = `<span class="h-meta">${q.src}</span><span class="h-en">• ${q.en}</span><span class="h-ko">${q.ko}</span>`;
+            historyList.prepend(item);
+        });
+
+        startPlayerTurn();
+    }
+
+    function startSession() {
+        state.numPeople = parseInt(document.getElementById('numPeople').value);
+        state.totalMinutes = parseFloat(document.getElementById('totalMinutes').value);
+        
+        if (isNaN(state.numPeople) || state.numPeople < 1 || isNaN(state.totalMinutes) || state.totalMinutes <= 0) {
+            alert("Please enter valid numbers.");
+            return;
+        }
+
+        state.isStarted = true;
         pickNewQuestion();
     }
 
     function pickNewQuestion() {
-        if (unusedQuestions.length === 0) {
-            unusedQuestions = [...questions];
-            alert("You've gone through all the questions! Starting over.");
+        if (state.unusedIndices.length === 0) {
+            resetUnusedIndices();
         }
 
-        const randomIndex = Math.floor(Math.random() * unusedQuestions.length);
+        if (state.currentQuestionObj) {
+            state.history.push(state.currentQuestionObj);
+        }
+
+        const randomIndexPos = Math.floor(Math.random() * state.unusedIndices.length);
+        const questionIndex = state.unusedIndices.splice(randomIndexPos, 1)[0];
+        state.currentQuestionObj = questionBank[questionIndex];
+        state.currentPlayer = 1;
         
-        // Add previous question to history before changing
-        if (currentQuestion !== "") {
-            addToHistory(currentQuestion);
-        }
-
-        currentQuestion = unusedQuestions.splice(randomIndex, 1)[0];
-        document.getElementById('question-display').innerText = currentQuestion;
-        currentPlayer = 1;
-        startPlayerTurn();
-    }
-
-    function addToHistory(q) {
-        const historyList = document.getElementById('history-list');
-        const item = document.createElement('div');
-        item.className = 'history-item';
-        item.innerText = `• ${q}`;
-        historyList.prepend(item);
+        saveToLocalStorage();
+        renderState();
     }
 
     function startPlayerTurn() {
         clearInterval(timerInterval);
-        document.getElementById('current-player').innerText = `Person ${currentPlayer}'s Turn`;
+        document.getElementById('current-player').innerText = `Person ${state.currentPlayer}'s Turn (참가자 ${state.currentPlayer} 차례)`;
+        
+        const timePerPerson = (state.totalMinutes * 60) / state.numPeople;
         secondsLeft = Math.round(timePerPerson);
+        
         updateTimerDisplay();
         
         const nextBtn = document.getElementById('nextBtn');
-        nextBtn.innerText = currentPlayer < numPeople ? "Next Person" : "New Question";
+        nextBtn.innerText = state.currentPlayer < state.numPeople ? "Next Person (다음 사람)" : "New Question (새 질문)";
 
         timerInterval = setInterval(() => {
             secondsLeft--;
@@ -197,19 +407,26 @@
         const absSeconds = Math.abs(secondsLeft);
         const mins = Math.floor(absSeconds / 60);
         const secs = absSeconds % 60;
-        
         const sign = secondsLeft < 0 ? "-" : "";
-        timerEl.innerText = `${sign}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         
+        timerEl.innerText = `${sign}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         timerEl.className = secondsLeft >= 0 ? 'timer-green' : 'timer-red';
     }
 
     function nextStep() {
-        if (currentPlayer < numPeople) {
-            currentPlayer++;
+        if (state.currentPlayer < state.numPeople) {
+            state.currentPlayer++;
+            saveToLocalStorage();
             startPlayerTurn();
         } else {
             pickNewQuestion();
+        }
+    }
+
+    function resetAll() {
+        if (confirm("Reset everything? (모든 진행 상황을 초기화할까요?)")) {
+            localStorage.removeItem('connection_game_state');
+            location.reload();
         }
     }
 </script>
