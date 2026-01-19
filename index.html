@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Questions to bring a group closer</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --secondary: #f39c12;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --bg: #f4f7f6;
+            --text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 { font-size: 1.8rem; margin-bottom: 1.5rem; color: var(--primary); }
+
+        .input-group { margin-bottom: 1rem; text-align: left; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        input {
+            width: 100%; padding: 10px; border: 2px solid #ddd;
+            border-radius: 8px; box-sizing: border-box; font-size: 1rem;
+        }
+
+        button {
+            background: var(--primary); color: white; border: none;
+            padding: 12px 25px; border-radius: 8px; font-size: 1rem;
+            cursor: pointer; transition: transform 0.1s, opacity 0.2s;
+            margin-top: 1rem; width: 100%;
+        }
+
+        button:active { transform: scale(0.98); }
+        button#nextBtn { background: var(--secondary); }
+
+        #question-area { display: none; }
+        #question-display {
+            font-size: 1.4rem; font-weight: 500; margin-bottom: 1.5rem;
+            min-height: 100px; line-height: 1.4; display: flex;
+            align-items: center; justify-content: center;
+        }
+
+        #timer-display {
+            font-size: 4.5rem; font-weight: bold; margin-bottom: 1rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .timer-green { color: var(--success); }
+        .timer-red { color: var(--danger); }
+
+        #current-player { font-weight: bold; color: var(--primary); margin-bottom: 0.5rem; font-size: 1.2rem;}
+
+        .history-container {
+            max-width: 700px; width: 100%; text-align: left;
+            background: #fff; padding: 1.5rem; border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            display: none;
+        }
+        .history-item {
+            padding: 10px 0; border-bottom: 1px solid #eee; font-size: 0.9rem; color: #666;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="setup-area">
+        <h1>Questions to bring a group closer</h1>
+        <div class="input-group">
+            <label>Number of People</label>
+            <input type="number" id="numPeople" value="2" min="1">
+        </div>
+        <div class="input-group">
+            <label>Total Time for Question (minutes)</label>
+            <input type="number" id="totalMinutes" value="4" min="0.1" step="0.1">
+        </div>
+        <button onclick="startSession()">Start First Question</button>
+    </div>
+
+    <div id="question-area">
+        <div id="question-display">Loading...</div>
+        <div id="current-player">Person 1's Turn</div>
+        <div id="timer-display" class="timer-green">00:00</div>
+        <button id="nextBtn" onclick="nextStep()">Next Person</button>
+    </div>
+</div>
+
+<div class="history-container" id="history-container">
+    <h3>Question History</h3>
+    <div id="history-list"></div>
+</div>
+
+<script>
+    const questions = [
+        // Arthur Aron's 36
+        "Given the choice of anyone in the world, whom would you want as a dinner guest?", "Would you like to be famous? In what way?", "Before making a telephone call, do you ever rehearse what you are going to say? Why?", "What would constitute a 'perfect' day for you?", "When did you last sing to yourself? To someone else?", "If you were able to live to the age of 90 and retain either the mind or body of a 30-year-old for the last 60 years of your life, which would you want?", "Do you have a secret hunch about how you will die?", "Name three things you and your partner/group appear to have in common.", "For what in your life do you feel most grateful?", "If you could change anything about the way you were raised, what would it be?", "Take four minutes and tell your life story in as much detail as possible.", "If you could wake up tomorrow having gained any one quality or ability, what would it be?", "If a crystal ball could tell you the truth about yourself, your life, the future or anything else, what would you want to know?", "Is there something that you’ve dreamed of doing for a long time? Why haven’t you done it?", "What is the greatest accomplishment of your life?", "What do you value most in a friendship?", "What is your most treasured memory?", "What is your most terrible memory?", "If you knew that in one year you would die suddenly, would you change anything about the way you are now living? Why?", "What does friendship mean to you?", "What roles do love and affection play in your life?", "Share something you consider a positive characteristic of others in the group.", "How close and warm is your family? Do you feel your childhood was happier than most other people’s?", "How do you feel about your relationship with your mother?", "Make three true 'we' statements each. For instance, 'We are both in this room feeling...'", "Complete this sentence: 'I wish I had someone with whom I could share...'", "If you were going to become a close friend with someone here, please share what would be important for them to know.", "Tell the others what you like about them; be very honest, saying things you might not say to someone you’ve just met.", "Share an embarrassing moment in your life.", "When did you last cry in front of another person? By yourself?", "Tell others something that you like about them already.", "What, if anything, is too serious to be joked about?", "If you were to die this evening with no opportunity to communicate with anyone, what would you most regret not having told someone? Why haven’t you told them yet?", "Your house, containing everything you own, catches fire. After saving your loved ones and pets, you have time to safely make a final dash to save any one item. What would it be? Why?", "Of all the people in your family, whose death would you find most disturbing? Why?", "Share a personal problem and ask for advice on how others might handle it.",
+        
+        // Gottman / Love Lab
+        "What is one of your partner's/friend's greatest fears?", "What is your fondest unrealized dream?", "What stresses are you facing in the immediate future?", "Who is your greatest source of support?", "What is your favorite way to be soothed when you are upset?", "What makes you feel most competent?", "What was one of your best childhood experiences?", "What kind of present would you like best?", "What is your favorite getaway place?", "What does emotional safety look like to you?", "What is one thing you wish people understood better about you?", "How do you process emotions when you're upset?", "What does 'partnership' mean to you in a relationship?", "What traditions from your family do you want to keep or change?", "What is your favorite way to spend a Sunday?", "What are your top three life values?", "How do you handle conflict in a relationship?", "What is your 'love language' (how do you prefer to receive love)?", "What is one thing you are currently struggling with?", "What does a 'successful life' look like to you?",
+
+        // Expanded Questions (Research-Based & Reflective)
+        "What is the most important lesson you’ve learned in the last year?", "What is something you’ve changed your mind about recently?", "What’s a risk you’re glad you took?", "What’s a risk you regret not taking?", "What is your favorite quality about yourself?", "What is the kindest thing anyone has ever done for you?", "What is the kindest thing you’ve ever done for someone else?", "If you could tell your younger self one thing, what would it be?", "What’s a song that always changes your mood?", "What’s your favorite way to spend time alone?", "What’s the most adventurous thing you’ve ever done?", "What’s a book or movie that changed the way you think?", "If you could have a superpower, what would it be and why?", "What’s your favorite memory with someone in this room?", "What’s something you’re looking forward to in the next month?", "What’s a hobby you’ve always wanted to try?", "What’s your favorite place you’ve ever visited?", "What’s a goal you’re currently working toward?", "What’s your favorite way to show someone you care?", "What’s a talent you have that not many people know about?", "What’s something that always makes you laugh?", "What’s your favorite family tradition?", "What’s a piece of advice that has stuck with you?", "What’s something you’re proud of, but don’t often get to talk about?", "What’s your favorite thing about your current life?", "If you could live anywhere in the world, where would it be?", "What’s a challenge you’ve overcome recently?", "What’s your favorite way to start the day?", "What’s something you’ve learned about yourself recently?", "What’s your favorite thing to do on a rainy day?", "What’s a dream you’ve had that you still remember vividly?", "What’s something you’re grateful for today?", "What’s your favorite way to give back to others?", "What’s a quality you admire in others?", "What’s something you’ve always wanted to learn?", "What’s your favorite thing to cook or eat?", "What’s a place you feel most at peace?", "What’s something you’ve done that required a lot of courage?", "What’s your favorite way to spend a Saturday night?", "What’s a memory that always brings a smile to your face?", "What’s something you’re passionate about?", "What’s your favorite thing about your job or school?", "What’s a goal you’ve achieved that you’re particularly proud of?", "What’s your favorite way to de-stress?", "What’s something you’ve done that you never thought you could?", "What’s your favorite thing about your best friend?", "What’s a place you’d love to visit one day?", "What’s something you’ve learned from a mistake?", "What’s your favorite way to stay active?", "What’s a piece of art that has moved you?", "What’s something you’ve done that made you feel really alive?", "What’s your favorite thing about the current season?", "What’s a memory from your childhood that makes you feel nostalgic?", "What’s something you’re working on improving about yourself?", "What’s your favorite way to spend a holiday?", "What’s a question you wish people would ask you more often?", "What’s something you’ve done that was outside of your comfort zone?", "What’s your favorite thing about your home?", "What’s a goal you have for the next year?", "What’s something you’ve done that made someone else’s day?", "What’s your favorite way to express your creativity?", "What’s a memory that you’ll never forget?", "What’s something you’re excited about in the future?", "What’s your favorite thing about your personality?", "What’s a place you’ve been that felt like another world?", "What’s something you’ve done that made you feel like you belong?", "What’s your favorite way to learn new things?", "What’s a piece of technology you couldn’t live without?", "What’s something you’ve done that you’re glad you did, even though it was hard?", "What’s your favorite thing about your family?", "What’s a goal you’ve had for a long time?", "What’s something you’ve done that made you feel successful?", "What’s your favorite way to spend time with friends?", "What’s a memory that always makes you feel loved?", "What’s something you’re grateful for in your career or education?", "What’s your favorite way to celebrate an accomplishment?", "What’s a place you’ve visited that you’d love to go back to?", "What’s something you’ve done that made you feel proud of who you are?", "What’s your favorite thing about the person sitting next to you?", "What’s a goal you’ve achieved that surprised you?", "What’s something you’ve done that made you feel like you were making a difference?", "What’s your favorite way to spend a morning?", "What’s a memory that always makes you feel inspired?", "What’s something you’re grateful for in your community?", "What’s your favorite way to relax after a long day?", "What’s a place you’ve been that you’ll always remember?", "What’s something you’ve done that made you feel like you were being yourself?", "What’s your favorite thing about your life right now?", "What’s a goal you have for the next five years?", "What’s something you’ve done that made you feel like you were growing?", "What’s your favorite way to spend an evening?", "What’s a memory that always makes you feel peaceful?", "What’s something you’re grateful for in your health?", "What’s your favorite way to stay connected with loved ones?", "What’s a place you’ve been that felt like home?", "What’s something you’ve done that made you feel like you were contributing?", "What’s your favorite thing about your daily routine?", "What’s a goal you’ve achieved that you worked really hard for?", "What’s something you’ve done that made you feel like you were learning?", "What’s your favorite way to spend a weekend?", "What’s a memory that always makes you feel happy?", "What’s something you’re grateful for in your environment?", "What’s your favorite way to spend time outdoors?", "What’s a place you’ve been that you found really beautiful?", "What’s something you’ve done that made you feel like you were being brave?", "What’s your favorite thing about your friends?", "What’s a goal you have for your personal growth?", "What’s something you’ve done that made you feel like you were being kind?", "What’s your favorite way to spend a quiet moment?", "What’s a memory that always makes you feel confident?", "What’s something you’re grateful for in your past?", "What’s your favorite way to spend a rainy afternoon?", "What’s a place you’ve been that you found really interesting?", "What’s something you’ve done that made you feel like you were being creative?", "What’s your favorite thing about your morning routine?", "What’s a goal you’ve achieved that made you feel fulfilled?", "What’s something you’ve done that made you feel like you were being helpful?", "What’s your favorite way to spend a sunny day?", "What’s a memory that always makes you feel motivated?", "What’s something you’re grateful for in your present?", "What’s your favorite way to spend time with your family?", "What’s a place you’ve been that you found really peaceful?", "What’s something you’ve done that made you feel like you were being generous?", "What’s your favorite thing about your evening routine?", "What’s a goal you have for your future?", "What’s something you’ve done that made you feel like you were being honest?", "What’s your favorite way to spend a holiday weekend?", "What’s a memory that always makes you feel courageous?", "What’s something you’re grateful for in your relationships?", "What’s your favorite way to spend time alone in nature?", "What’s a place you’ve been that you found really inspiring?", "What’s something you’ve done that made you feel like you were being patient?", "What’s your favorite thing about your current situation?", "What’s a goal you’ve achieved that made you feel powerful?", "What’s something you’ve done that made you feel like you were being thoughtful?", "What’s your favorite way to spend a long weekend?", "What’s a memory that always makes you feel wise?", "What’s something you’re grateful for in your skills and talents?", "What’s your favorite way to spend time with your partner?", "What’s a place you’ve been that you found really magical?", "What’s something you’ve done that made you feel like you were being resilient?", "What’s your favorite thing about your future?", "What’s a goal you have for your career or education?", "What’s something you’ve done that made you feel like you were being adventurous?", "What’s your favorite way to spend a summer day?", "What’s a memory that always makes you feel adventurous?", "What’s something you’re grateful for in your life's journey?", "What’s your favorite way to spend time with your children (if applicable)?", "What’s a place you’ve been that you found really energizing?", "What’s something you’ve done that made you feel like you were being supportive?", "What’s your favorite thing about your past?", "What’s a goal you’ve achieved that made you feel like you were making a difference?", "What’s something you’ve done that made you feel like you were being understanding?", "What’s your favorite way to spend a winter day?", "What’s a memory that always makes you feel proud?", "What’s something you’re grateful for in your inner strength?", "What’s your favorite way to spend time with your pets (if applicable)?", "What’s a place you’ve been that you found really relaxing?", "What’s something you’ve done that made you feel like you were being compassionate?", "What’s your favorite thing about yourself right now?", "What’s a goal you have for your health and wellness?", "What’s something you’ve done that made you feel like you were being authentic?", "What’s your favorite way to spend a spring day?", "What’s a memory that always makes you feel grateful?", "What’s something you’re grateful for in your ability to love?", "What’s your favorite way to spend time with your parents (if applicable)?", "What’s a place you’ve been that you found really grounding?", "What’s something you’ve done that made you feel like you were being bold?", "What’s your favorite thing about your personality?", "What’s a goal you’ve achieved that made you feel like you were being true to yourself?", "What’s something you’ve done that made you feel like you were being playful?", "What’s your favorite way to spend an autumn day?", "What’s a memory that always makes you feel strong?", "What’s something you’re grateful for in your sense of humor?", "What’s your favorite way to spend time with your siblings (if applicable)?", "What’s a place you’ve been that you found really stimulating?", "What’s something you’ve done that made you feel like you were being wise?", "What’s your favorite thing about your character?", "What’s a goal you have for your relationships?", "What’s something you’ve done that made you feel like you were being curious?", "What’s your favorite way to spend a day doing nothing?", "What’s a memory that always makes you feel curious?", "What’s something you’re grateful for in your intuition?"
+    ];
+
+    let unusedQuestions = [...questions];
+    let currentQuestion = "";
+    let currentPlayer = 1;
+    let numPeople = 0;
+    let timePerPerson = 0;
+    let secondsLeft = 0;
+    let timerInterval = null;
+
+    function startSession() {
+        numPeople = parseInt(document.getElementById('numPeople').value);
+        let totalMinutes = parseFloat(document.getElementById('totalMinutes').value);
+        
+        if (numPeople < 1 || totalMinutes <= 0) {
+            alert("Please enter valid numbers.");
+            return;
+        }
+
+        timePerPerson = (totalMinutes * 60) / numPeople;
+        document.getElementById('setup-area').style.display = 'none';
+        document.getElementById('question-area').style.display = 'block';
+        document.getElementById('history-container').style.display = 'block';
+        
+        pickNewQuestion();
+    }
+
+    function pickNewQuestion() {
+        if (unusedQuestions.length === 0) {
+            unusedQuestions = [...questions];
+            alert("You've gone through all the questions! Starting over.");
+        }
+
+        const randomIndex = Math.floor(Math.random() * unusedQuestions.length);
+        
+        // Add previous question to history before changing
+        if (currentQuestion !== "") {
+            addToHistory(currentQuestion);
+        }
+
+        currentQuestion = unusedQuestions.splice(randomIndex, 1)[0];
+        document.getElementById('question-display').innerText = currentQuestion;
+        currentPlayer = 1;
+        startPlayerTurn();
+    }
+
+    function addToHistory(q) {
+        const historyList = document.getElementById('history-list');
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.innerText = `• ${q}`;
+        historyList.prepend(item);
+    }
+
+    function startPlayerTurn() {
+        clearInterval(timerInterval);
+        document.getElementById('current-player').innerText = `Person ${currentPlayer}'s Turn`;
+        secondsLeft = Math.round(timePerPerson);
+        updateTimerDisplay();
+        
+        const nextBtn = document.getElementById('nextBtn');
+        nextBtn.innerText = currentPlayer < numPeople ? "Next Person" : "New Question";
+
+        timerInterval = setInterval(() => {
+            secondsLeft--;
+            updateTimerDisplay();
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const timerEl = document.getElementById('timer-display');
+        const absSeconds = Math.abs(secondsLeft);
+        const mins = Math.floor(absSeconds / 60);
+        const secs = absSeconds % 60;
+        
+        const sign = secondsLeft < 0 ? "-" : "";
+        timerEl.innerText = `${sign}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        
+        timerEl.className = secondsLeft >= 0 ? 'timer-green' : 'timer-red';
+    }
+
+    function nextStep() {
+        if (currentPlayer < numPeople) {
+            currentPlayer++;
+            startPlayerTurn();
+        } else {
+            pickNewQuestion();
+        }
+    }
+</script>
+
+</body>
+</html>
