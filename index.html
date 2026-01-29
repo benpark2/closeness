@@ -268,12 +268,12 @@
         { src: "Deep Reflection", en: "What is the best thing about being you?", ko: "당신 자신으로 사는 것의 가장 좋은 점은 무엇인가요?" }
     ];
 
-    // Populating more generic but meaningful variations to hit 200 items
+    // Populating more generic but meaningful variations to add more questions
     const topics = [
         {en: "patience", ko: "인내"}, {en: "work ethic", ko: "직업 윤리"}, {en: "nature", ko: "자연"}, 
         {en: "forgiveness", ko: "용서"}, {en: "creativity", ko: "창의성"}, {en: "risk", ko: "모험/위험"}, 
         {en: "silence", ko: "침묵"}, {en: "failure", ko: "실패"}, {en: "success", ko: "성공"}, 
-        {en: "family", ko: "가족"}, {en: "legacy", ko: "유산"}, {en: "change", ko: "변화"},
+        {en: "family", ko: "가족"}, {en: "friendship", ko: "우정"}, {en: "change", ko: "변화"},
         {en: "trust", ko: "신뢰"}, {en: "honesty", ko: "정직"}, {en: "money", ko: "돈"},
         {en: "travel", ko: "여행"}, {en: "health", ko: "건강"}, {en: "loneliness", ko: "외로움"}
     ];
@@ -281,8 +281,8 @@
     topics.forEach(t => {
         questionBank.push({
             src: "Deep Reflection",
-            en: `What is your relationship with ${t.en} like right now?`,
-            ko: `지금 당신과 '${t.ko}'의 관계는 어떤가요?`
+            en: `What is your current perspective on ${t.en} like right now?`,
+            ko: `지금 당신은 '${t.ko}'에 대해 어떻게 생각하나요?`
         });
         questionBank.push({
             src: "Values",
