@@ -9,6 +9,7 @@
  * - English + Korean by default.
  * - Persistent "Show Korean" toggle; off hides Korean throughout the rendered UI.
  * - Removes the three repetitive generated template families, preserving hand-written prompts.
+ * - Migrates legacy Growth/Values/Deep Reflection source labels in saved history to Evidence-informed, with a one-time pre-v2.2 backup.
  * - Adds the 240 curated bilingual prompts.
  * - Keeps the default layout compact: only a collapsed follow-up affordance is shown.
  * - Expanding it reveals source, connection mechanism, listening cue, and three suggestions.
@@ -18,11 +19,13 @@
 (() => {
   "use strict";
 
-  const VERSION = "2.1.0";
+  const VERSION = "2.2.0";
   if (window.__CLOSENESS_UPGRADE_VERSION === VERSION) return;
   window.__CLOSENESS_UPGRADE_VERSION = VERSION;
 
   const PREF_KEY = "closeness_show_korean";
+  const STATE_KEY = "connection_game_state";
+  const PRE_V22_BACKUP_KEY = "connection_game_state_backup_pre_v2_2";
   const HIDE_CLASS = "closeness-hide-korean";
   const HANGUL_RE = /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/;
   const originalText = new WeakMap();
@@ -233,15 +236,97 @@
   }
 
   function normalizeSource(q) {
-    const raw = String(q?.src || "").trim();
+    if (!q || typeof q !== "object") return false;
+
+    let changed = false;
+    const raw = String(q.src || "").trim();
     if (!raw) {
       q.src = "Evidence-informed";
-      return;
-    }
-
-    if (GENERIC_SOURCE_LABELS.has(raw.toLowerCase())) {
+      changed = true;
+    } else if (GENERIC_SOURCE_LABELS.has(raw.toLowerCase())) {
       if (!q.legacyCategory) q.legacyCategory = raw;
       q.src = "Evidence-informed";
+      changed = true;
+    }
+
+    // Some older snapshots used `source` instead of `src`. Keep that field
+    // consistent too so a legacy history renderer cannot surface Growth/Values/etc.
+    if (typeof q.source === "string") {
+      const sourceRaw = q.source.trim();
+      if (GENERIC_SOURCE_LABELS.has(sourceRaw.toLowerCase())) {
+        if (!q.legacyCategory) q.legacyCategory = sourceRaw;
+        q.source = "Evidence-informed";
+        changed = true;
+      }
+    }
+
+    return changed;
+  }
+
+  function backupStoredStateOnce() {
+    try {
+      if (localStorage.getItem(PRE_V22_BACKUP_KEY) !== null) return;
+      const raw = localStorage.getItem(STATE_KEY);
+      if (raw !== null) localStorage.setItem(PRE_V22_BACKUP_KEY, raw);
+    } catch (error) {
+      console.warn("[Closeness] Could not create pre-v2.2 state backup:", error);
+    }
+  }
+
+  function migrateLegacySourceMetadata(root) {
+    if (!root || typeof root !== "object") return false;
+    const looksLikeQuestion =
+      Object.prototype.hasOwnProperty.call(root, "src") ||
+      Object.prototype.hasOwnProperty.call(root, "source") ||
+      typeof root.en === "string";
+    let changed = looksLikeQuestion ? normalizeSource(root) : false;
+
+    // Known historical snapshot shapes from this app and prior upgrade versions.
+    for (const key of ["questionObj", "q", "currentQuestionObj"]) {
+      if (root[key] && typeof root[key] === "object") {
+        changed = migrateLegacySourceMetadata(root[key]) || changed;
+      }
+    }
+    return changed;
+  }
+
+  function migrateSavedSourceLabels() {
+    if (typeof state === "undefined" || !state) return false;
+    let changed = false;
+
+    if (Array.isArray(state.history)) {
+      for (const item of state.history) {
+        changed = migrateLegacySourceMetadata(item) || changed;
+      }
+    }
+
+    if (state.currentQuestionObj) {
+      changed = migrateLegacySourceMetadata(state.currentQuestionObj) || changed;
+    }
+
+    return changed;
+  }
+
+  function normalizeVisibleLegacySources() {
+    // Defense in depth for an already-painted legacy history DOM. The saved
+    // objects are migrated above; this only touches text that is clearly a
+    // standalone source/category label inside history/source UI containers.
+    const roots = document.querySelectorAll(
+      '#history, #history-list, .history, .history-list, .history-entry, ' +
+      '#question-source, .question-source, .source-label, .h-src'
+    );
+    const pattern = /^(?:(Source|Src)\s*:\s*)?(Deep Reflection|Values|Growth)$/i;
+
+    for (const root of roots) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const text = String(node.nodeValue || '').trim();
+        const match = text.match(pattern);
+        if (!match) continue;
+        const prefix = match[1] ? `${match[1]}: ` : '';
+        node.nodeValue = `${prefix}Evidence-informed`;
+      }
     }
   }
 
@@ -279,7 +364,7 @@
       if (typeof saveToLocalStorage === "function") {
         saveToLocalStorage();
       } else if (typeof state !== "undefined" && state) {
-        localStorage.setItem("connection_game_state", JSON.stringify(state));
+        localStorage.setItem(STATE_KEY, JSON.stringify(state));
       }
     } catch (error) {
       console.warn("[Closeness] Could not save state:", error);
@@ -297,8 +382,14 @@
   }
 
   function upgradeQuestionBank() {
+    // The browser's localStorage is effectively this app's database. Preserve one
+    // untouched copy before normalizing any legacy source metadata.
+    backupStoredStateOnce();
+    const sourceMetadataChanged = migrateSavedSourceLabels();
+
     if (typeof questions === "undefined" || !Array.isArray(questions)) {
       console.warn("[Closeness] Existing `questions` array was not found. Check script order.");
+      if (sourceMetadataChanged) saveStateSafely();
       return false;
     }
 
@@ -351,6 +442,18 @@
         state.unusedIndices = questions.map((_, index) => index);
       }
       saveStateSafely();
+
+      // The original app may have already painted legacy source labels into the
+      // DOM during its window.onload handler. Re-render once so migrated history
+      // is corrected immediately on the first upgraded page load.
+      if (sourceMetadataChanged && typeof renderState === "function") {
+        try {
+          renderState();
+          normalizeVisibleLegacySources();
+        } catch (error) {
+          console.warn("[Closeness] Saved history migrated, but immediate re-render failed:", error);
+        }
+      }
     }
 
     console.info(
@@ -1008,6 +1111,7 @@
         }
       }
 
+      normalizeVisibleLegacySources();
       if (shouldRefreshAids) scheduleAidRefresh();
     });
 
@@ -1035,13 +1139,15 @@
       curatedQuestionCount: Array.isArray(window.CLOSENESS_CURATED_QUESTIONS) ? window.CLOSENESS_CURATED_QUESTIONS.length : 0,
       mechanismCounts: counts,
       showKorean: showKoreanPreference(),
-      currentMechanism: typeof state !== "undefined" && state?.currentQuestionObj ? inferMechanism(state.currentQuestionObj) : null
+      currentMechanism: typeof state !== "undefined" && state?.currentQuestionObj ? inferMechanism(state.currentQuestionObj) : null,
+      preV22BackupPresent: localStorage.getItem(PRE_V22_BACKUP_KEY) !== null
     };
   }
 
   function boot() {
     installStyles();
     upgradeQuestionBank();
+    normalizeVisibleLegacySources();
     installLanguageToggle();
     ensureConversationAids();
     installSelectionGuard();
