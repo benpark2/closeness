@@ -10,15 +10,15 @@
  * - Persistent "Show Korean" toggle; off hides Korean throughout the rendered UI.
  * - Removes the three repetitive generated template families, preserving hand-written prompts.
  * - Adds the 240 curated bilingual prompts.
- * - Shows each current question's source and connection mechanism on the page.
- * - Shows an optional, mechanism-specific listening cue + three follow-up suggestions.
+ * - Keeps the default layout compact: only a collapsed follow-up affordance is shown.
+ * - Expanding it reveals source, connection mechanism, listening cue, and three suggestions.
  * - Avoids back-to-back main questions from the same mechanism when alternatives remain.
  * - Also avoids the same broad opening style back-to-back when the pool allows it.
  */
 (() => {
   "use strict";
 
-  const VERSION = "2.0.0";
+  const VERSION = "2.1.0";
   if (window.__CLOSENESS_UPGRADE_VERSION === VERSION) return;
   window.__CLOSENESS_UPGRADE_VERSION = VERSION;
 
@@ -525,81 +525,94 @@
       }
 
       #closeness-conversation-aids {
-        margin: .75rem 0 1rem;
+        margin: .45rem 0 .75rem;
         width: 100%;
       }
-      .closeness-source-card,
       .closeness-followup-card {
         box-sizing: border-box;
         width: 100%;
-        border: 1px solid rgba(127, 127, 127, .24);
-        border-radius: 12px;
-        padding: .8rem .9rem;
-        background: rgba(127, 127, 127, .06);
-      }
-      .closeness-source-card {
-        margin-bottom: .65rem;
-        font-size: .9rem;
-        line-height: 1.4;
-      }
-      .closeness-source-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: .35rem 1rem;
-        align-items: baseline;
-      }
-      .closeness-source-item strong {
-        font-weight: 700;
-      }
-      .closeness-evidence-details {
-        margin-top: .45rem;
-      }
-      .closeness-evidence-details summary {
-        cursor: pointer;
-        font-weight: 600;
-      }
-      .closeness-evidence-details p {
-        margin: .45rem 0;
-      }
-      .closeness-evidence-details ul {
-        margin: .4rem 0 .1rem 1.2rem;
+        margin: 0;
         padding: 0;
-      }
-      .closeness-evidence-details li {
-        margin: .35rem 0;
-      }
-      .closeness-evidence-details a {
-        overflow-wrap: anywhere;
-      }
-      .closeness-evidence-note {
-        opacity: .8;
-        font-size: .86em;
-      }
-
-      .closeness-followup-card {
+        border: 0;
+        background: transparent;
         line-height: 1.42;
       }
-      .closeness-followup-title {
-        font-weight: 800;
-        margin-bottom: .35rem;
+      .closeness-followup-card > summary {
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        padding: .2rem 0;
+        font-weight: 700;
+        font-size: .95rem;
+        line-height: 1.25;
+        user-select: none;
+      }
+      .closeness-followup-card > summary::-webkit-details-marker {
+        display: none;
+      }
+      .closeness-followup-card > summary::before {
+        content: "›";
+        display: inline-block;
+        font-size: 1.1em;
+        transform: translateY(-.02em);
+      }
+      .closeness-followup-card[open] > summary::before {
+        transform: rotate(90deg);
+      }
+      .closeness-followup-expanded {
+        margin-top: .4rem;
+        border: 1px solid rgba(127, 127, 127, .24);
+        border-radius: 10px;
+        padding: .7rem .8rem;
+        background: rgba(127, 127, 127, .05);
       }
       .closeness-listening-cue {
         margin: 0 0 .55rem;
       }
       .closeness-followup-label {
         font-weight: 700;
-        margin-bottom: .25rem;
+        margin-bottom: .2rem;
       }
       .closeness-followup-list {
-        margin: .25rem 0 .35rem 1.25rem;
+        margin: .2rem 0 .55rem 1.15rem;
         padding: 0;
       }
       .closeness-followup-list li {
-        margin: .28rem 0;
+        margin: .25rem 0;
       }
-      .closeness-followup-note {
-        opacity: .8;
-        font-size: .88rem;
+      .closeness-meta-line {
+        margin-top: .55rem;
+        padding-top: .5rem;
+        border-top: 1px solid rgba(127, 127, 127, .18);
+        font-size: .82rem;
+        line-height: 1.35;
+        opacity: .78;
+      }
+      .closeness-evidence-details {
+        margin-top: .4rem;
+        font-size: .84rem;
+      }
+      .closeness-evidence-details summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .closeness-evidence-details p {
+        margin: .4rem 0;
+      }
+      .closeness-evidence-details ul {
+        margin: .35rem 0 .05rem 1.1rem;
+        padding: 0;
+      }
+      .closeness-evidence-details li {
+        margin: .3rem 0;
+      }
+      .closeness-evidence-details a {
+        overflow-wrap: anywhere;
+      }
+      .closeness-evidence-note {
+        opacity: .82;
+        font-size: .9em;
       }
     `;
     document.head.appendChild(style);
@@ -653,7 +666,10 @@
   }
 
   function sourceDisplay(q) {
-    const src = String(q?.src || "Evidence-informed").trim();
+    const raw = String(q?.src || "").trim();
+    const src = !raw || GENERIC_SOURCE_LABELS.has(raw.toLowerCase())
+      ? "Evidence-informed"
+      : raw;
     return {
       en: src,
       ko: src.toLowerCase() === "evidence-informed" ? "(연구 기반)" : null
@@ -741,15 +757,11 @@
     panel.setAttribute("aria-live", "polite");
     panel.style.display = "none";
 
-    const source = document.createElement("div");
-    source.className = "closeness-source-card";
-    source.id = "closeness-source-card";
-
-    const followup = document.createElement("div");
+    const followup = document.createElement("details");
     followup.className = "closeness-followup-card";
     followup.id = "closeness-followup-card";
 
-    panel.append(source, followup);
+    panel.appendChild(followup);
     document.body.appendChild(panel);
     return panel;
   }
@@ -803,41 +815,22 @@
     }
     lastAidSignature = signature;
 
-    const sourceCard = document.getElementById("closeness-source-card");
     const followupCard = document.getElementById("closeness-followup-card");
-    sourceCard.replaceChildren();
     followupCard.replaceChildren();
+    // Re-rendering on every speaker/question intentionally resets this closed.
+    followupCard.open = false;
 
     const info = mechanismInfo(q);
     const src = sourceDisplay(q);
 
-    const sourceRow = document.createElement("div");
-    sourceRow.className = "closeness-source-row";
+    const summary = document.createElement("summary");
+    summary.append(
+      "Listen, then follow up — optional",
+      makeKoSpan("(먼저 듣고, 후속 질문 — 선택사항)")
+    );
 
-    const sourceItem = document.createElement("span");
-    sourceItem.className = "closeness-source-item";
-    sourceItem.append("Source", makeKoSpan("(출처)"), ": ");
-    const sourceStrong = document.createElement("strong");
-    sourceStrong.append(src.en);
-    if (src.ko) sourceStrong.append(makeKoSpan(src.ko));
-    sourceItem.appendChild(sourceStrong);
-
-    const focusItem = document.createElement("span");
-    focusItem.className = "closeness-source-item";
-    focusItem.append("Connection focus", makeKoSpan("(관계 초점)"), ": ");
-    const focusStrong = document.createElement("strong");
-    focusStrong.append(info.labelEn, makeKoSpan(`(${info.labelKo})`));
-    focusItem.appendChild(focusStrong);
-
-    sourceRow.append(sourceItem, focusItem);
-    sourceCard.appendChild(sourceRow);
-
-    const evidenceDetails = buildEvidenceDetails(q);
-    if (evidenceDetails) sourceCard.appendChild(evidenceDetails);
-
-    const followupTitle = document.createElement("div");
-    followupTitle.className = "closeness-followup-title";
-    followupTitle.append("Listen, then follow up — optional", makeKoSpan("(먼저 듣고, 자연스럽게 후속 질문 — 선택사항)"));
+    const expanded = document.createElement("div");
+    expanded.className = "closeness-followup-expanded";
 
     const cue = document.createElement("p");
     cue.className = "closeness-listening-cue";
@@ -845,7 +838,7 @@
 
     const label = document.createElement("div");
     label.className = "closeness-followup-label";
-    label.append("Pick one if it fits:", makeKoSpan("어울리는 것 하나만 골라 보세요:"));
+    label.append("Try one if it fits:", makeKoSpan("어울리면 하나만 물어보세요:"));
 
     const list = document.createElement("ul");
     list.className = "closeness-followup-list";
@@ -855,14 +848,23 @@
       list.appendChild(li);
     }
 
-    const note = document.createElement("div");
-    note.className = "closeness-followup-note";
-    note.append(
-      "A natural follow-up is better than running through the list. One is enough.",
-      makeKoSpan("목록을 차례로 묻기보다 자연스러운 후속 질문 하나면 충분합니다.")
-    );
+    const meta = document.createElement("div");
+    meta.className = "closeness-meta-line";
+    meta.append("Source: ");
+    const sourceStrong = document.createElement("strong");
+    sourceStrong.append(src.en);
+    if (src.ko) sourceStrong.append(makeKoSpan(src.ko));
+    meta.append(sourceStrong, " · Focus: ");
+    const focusStrong = document.createElement("strong");
+    focusStrong.append(info.labelEn, makeKoSpan(`(${info.labelKo})`));
+    meta.appendChild(focusStrong);
 
-    followupCard.append(followupTitle, cue, label, list, note);
+    expanded.append(cue, label, list, meta);
+
+    const evidenceDetails = buildEvidenceDetails(q);
+    if (evidenceDetails) expanded.appendChild(evidenceDetails);
+
+    followupCard.append(summary, expanded);
     panel.style.display = "";
 
     // Avoid a Korean flash if the preference is currently off.
