@@ -9,7 +9,7 @@
  * - English + Korean by default.
  * - Persistent "Show Korean" toggle; off hides Korean throughout the rendered UI.
  * - Removes the three repetitive generated template families, preserving hand-written prompts.
- * - Migrates legacy Growth/Values/Deep Reflection source labels in saved history to Evidence-informed, with a one-time pre-v2.2 backup.
+ * - Authoritatively normalizes legacy Growth/Values/Deep Reflection source labels to Evidence-informed, including deeply nested saved history and later DOM re-renders.
  * - Adds the 240 curated bilingual prompts.
  * - Keeps the default layout compact: only a collapsed follow-up affordance is shown.
  * - Expanding it reveals source, connection mechanism, listening cue, and three suggestions.
@@ -19,13 +19,14 @@
 (() => {
   "use strict";
 
-  const VERSION = "2.2.0";
+  const VERSION = "2.3.0";
   if (window.__CLOSENESS_UPGRADE_VERSION === VERSION) return;
   window.__CLOSENESS_UPGRADE_VERSION = VERSION;
 
   const PREF_KEY = "closeness_show_korean";
   const STATE_KEY = "connection_game_state";
   const PRE_V22_BACKUP_KEY = "connection_game_state_backup_pre_v2_2";
+  const PRE_V23_BACKUP_KEY = "connection_game_state_backup_pre_v2_3";
   const HIDE_CLASS = "closeness-hide-korean";
   const HANGUL_RE = /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/;
   const originalText = new WeakMap();
@@ -235,27 +236,47 @@
     return "self_disclosure";
   }
 
+  function normalizeSourceValue(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) return "Evidence-informed";
+    return GENERIC_SOURCE_LABELS.has(raw.toLowerCase()) ? "Evidence-informed" : raw;
+  }
+
   function normalizeSource(q) {
     if (!q || typeof q !== "object") return false;
 
     let changed = false;
-    const raw = String(q.src || "").trim();
-    if (!raw) {
-      q.src = "Evidence-informed";
-      changed = true;
-    } else if (GENERIC_SOURCE_LABELS.has(raw.toLowerCase())) {
-      if (!q.legacyCategory) q.legacyCategory = raw;
-      q.src = "Evidence-informed";
+    const rawSrc = typeof q.src === "string" ? q.src.trim() : "";
+    const rawSource = typeof q.source === "string" ? q.source.trim() : "";
+
+    // Prefer a genuine citation from either legacy field. A generic category
+    // label must never overwrite a real citation that happens to live in the
+    // other field.
+    const genuine = [rawSrc, rawSource].find(
+      (value) => value && !GENERIC_SOURCE_LABELS.has(value.toLowerCase())
+    );
+    const rawCanonical = genuine || rawSrc || rawSource;
+    const normalizedCanonical = normalizeSourceValue(rawCanonical);
+
+    for (const legacy of [rawSrc, rawSource]) {
+      if (legacy && GENERIC_SOURCE_LABELS.has(legacy.toLowerCase()) && !q.legacyCategory) {
+        q.legacyCategory = legacy;
+      }
+    }
+
+    if (q.src !== normalizedCanonical) {
+      q.src = normalizedCanonical;
       changed = true;
     }
 
-    // Some older snapshots used `source` instead of `src`. Keep that field
-    // consistent too so a legacy history renderer cannot surface Growth/Values/etc.
+    // If a legacy `source` field exists, normalize generic values there too,
+    // but preserve a genuine citation verbatim.
     if (typeof q.source === "string") {
-      const sourceRaw = q.source.trim();
-      if (GENERIC_SOURCE_LABELS.has(sourceRaw.toLowerCase())) {
-        if (!q.legacyCategory) q.legacyCategory = sourceRaw;
-        q.source = "Evidence-informed";
+      const normalizedSource = rawSource && !GENERIC_SOURCE_LABELS.has(rawSource.toLowerCase())
+        ? rawSource
+        : normalizedCanonical;
+      if (q.source !== normalizedSource) {
+        q.source = normalizedSource;
         changed = true;
       }
     }
@@ -265,69 +286,108 @@
 
   function backupStoredStateOnce() {
     try {
-      if (localStorage.getItem(PRE_V22_BACKUP_KEY) !== null) return;
       const raw = localStorage.getItem(STATE_KEY);
-      if (raw !== null) localStorage.setItem(PRE_V22_BACKUP_KEY, raw);
+      if (raw === null) return;
+      if (localStorage.getItem(PRE_V22_BACKUP_KEY) === null) {
+        localStorage.setItem(PRE_V22_BACKUP_KEY, raw);
+      }
+      // v2.3 creates a second checkpoint immediately before the deeper migration.
+      if (localStorage.getItem(PRE_V23_BACKUP_KEY) === null) {
+        localStorage.setItem(PRE_V23_BACKUP_KEY, raw);
+      }
     } catch (error) {
-      console.warn("[Closeness] Could not create pre-v2.2 state backup:", error);
+      console.warn("[Closeness] Could not create state backup:", error);
     }
   }
 
-  function migrateLegacySourceMetadata(root) {
+  function migrateLegacySourceMetadata(root, seen = new WeakSet()) {
     if (!root || typeof root !== "object") return false;
-    const looksLikeQuestion =
-      Object.prototype.hasOwnProperty.call(root, "src") ||
-      Object.prototype.hasOwnProperty.call(root, "source") ||
-      typeof root.en === "string";
-    let changed = looksLikeQuestion ? normalizeSource(root) : false;
+    if (seen.has(root)) return false;
+    seen.add(root);
 
-    // Known historical snapshot shapes from this app and prior upgrade versions.
-    for (const key of ["questionObj", "q", "currentQuestionObj"]) {
-      if (root[key] && typeof root[key] === "object") {
-        changed = migrateLegacySourceMetadata(root[key]) || changed;
+    let changed = false;
+
+    // Normalize source fields on every object, regardless of the snapshot shape.
+    if (Object.prototype.hasOwnProperty.call(root, "src") ||
+        Object.prototype.hasOwnProperty.call(root, "source")) {
+      changed = normalizeSource(root) || changed;
+    }
+
+    // Walk every nested array/object. Old releases stored history in more than
+    // one shape; exhaustive traversal makes the migration shape-independent.
+    for (const value of Object.values(root)) {
+      if (value && typeof value === "object") {
+        changed = migrateLegacySourceMetadata(value, seen) || changed;
       }
     }
+
     return changed;
   }
 
   function migrateSavedSourceLabels() {
-    if (typeof state === "undefined" || !state) return false;
-    let changed = false;
-
-    if (Array.isArray(state.history)) {
-      for (const item of state.history) {
-        changed = migrateLegacySourceMetadata(item) || changed;
-      }
-    }
-
-    if (state.currentQuestionObj) {
-      changed = migrateLegacySourceMetadata(state.currentQuestionObj) || changed;
-    }
-
-    return changed;
+    if (typeof state === "undefined" || !state || typeof state !== "object") return false;
+    return migrateLegacySourceMetadata(state);
   }
 
-  function normalizeVisibleLegacySources() {
-    // Defense in depth for an already-painted legacy history DOM. The saved
-    // objects are migrated above; this only touches text that is clearly a
-    // standalone source/category label inside history/source UI containers.
-    const roots = document.querySelectorAll(
-      '#history, #history-list, .history, .history-list, .history-entry, ' +
-      '#question-source, .question-source, .source-label, .h-src'
-    );
-    const pattern = /^(?:(Source|Src)\s*:\s*)?(Deep Reflection|Values|Growth)$/i;
+  function sourceContextFor(node) {
+    const parent = node?.parentElement;
+    if (!parent) return false;
+    return Boolean(parent.closest(
+      '#history, #history-list, [id*="history" i], [class*="history" i], ' +
+      '#question-source, [id*="source" i], [class*="source" i], ' +
+      '[id*="src" i], [class*="src" i], [id*="meta" i], [class*="meta" i], ' +
+      '#closeness-conversation-aids'
+    ));
+  }
 
-    for (const root of roots) {
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      let node;
-      while ((node = walker.nextNode())) {
-        const text = String(node.nodeValue || '').trim();
-        const match = text.match(pattern);
-        if (!match) continue;
-        const prefix = match[1] ? `${match[1]}: ` : '';
-        node.nodeValue = `${prefix}Evidence-informed`;
+  function normalizeVisibleSourceText(text, sourceContext = false) {
+    let out = String(text ?? "");
+
+    // Always safe when the text explicitly labels itself as a source.
+    out = out.replace(
+      /\b(Source|Src)(\s*[:—–-]\s*)(Deep Reflection|Values|Growth)\b/gi,
+      (_match, label, separator) => `${label}${separator}Evidence-informed`
+    );
+
+    // A bare legacy category label is never a useful source label in the
+    // upgraded app. Normalize it globally so even unknown legacy markup such
+    // as <span id="current-src">Growth</span> cannot leak through.
+    const trimmed = out.trim();
+    if (GENERIC_SOURCE_LABELS.has(trimmed.toLowerCase())) {
+      const leading = out.match(/^\s*/)?.[0] || "";
+      const trailing = out.match(/\s*$/)?.[0] || "";
+      return `${leading}Evidence-informed${trailing}`;
+    }
+
+    // Inside source/history/meta UI, also catch old renderers where the entire
+    // text node is just a decorated legacy value. Do not replace the word
+    // "growth" inside ordinary question/history prose.
+    if (sourceContext) {
+      const decorated = out.match(
+        /^(\s*(?:(?:Source|Src|Category)\s*[:·—–-]\s*|[\[(]\s*))?(Deep Reflection|Values|Growth)(\s*[\])]\s*|\s*)$/i
+      );
+      if (decorated) {
+        return `${decorated[1] || ""}Evidence-informed${decorated[3] || ""}`;
       }
     }
+
+    return out;
+  }
+
+  function normalizeVisibleLegacySources(root = document.body) {
+    if (!root) return;
+
+    const processNode = (node) => {
+      if (!node || node.nodeType !== Node.TEXT_NODE || skippedTextNode(node)) return;
+      const current = String(node.nodeValue || "");
+      const normalized = normalizeVisibleSourceText(current, sourceContextFor(node));
+      if (normalized !== current) node.nodeValue = normalized;
+    };
+
+    if (root.nodeType === Node.TEXT_NODE) processNode(root);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) processNode(node);
   }
 
   function ensureMetadata(q) {
@@ -769,10 +829,7 @@
   }
 
   function sourceDisplay(q) {
-    const raw = String(q?.src || "").trim();
-    const src = !raw || GENERIC_SOURCE_LABELS.has(raw.toLowerCase())
-      ? "Evidence-informed"
-      : raw;
+    const src = normalizeSourceValue(q?.src || q?.source);
     return {
       en: src,
       ko: src.toLowerCase() === "evidence-informed" ? "(연구 기반)" : null
@@ -1140,7 +1197,8 @@
       mechanismCounts: counts,
       showKorean: showKoreanPreference(),
       currentMechanism: typeof state !== "undefined" && state?.currentQuestionObj ? inferMechanism(state.currentQuestionObj) : null,
-      preV22BackupPresent: localStorage.getItem(PRE_V22_BACKUP_KEY) !== null
+      preV22BackupPresent: localStorage.getItem(PRE_V22_BACKUP_KEY) !== null,
+      preV23BackupPresent: localStorage.getItem(PRE_V23_BACKUP_KEY) !== null
     };
   }
 
